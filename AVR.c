@@ -1,8 +1,8 @@
 /*
- * GccApplication1.c
+ * GccApplication23.c
  *
- * Created: 2023-03-31 12:42:59
- * Author : tmk22es
+ * Created: 2023-04-13 11:26:16
+ * Author : tmk22ce
  */ 
 
 #define F_CPU 1000000
@@ -42,7 +42,8 @@ int16_t Ki = (3 << NUM_FRACTION_BITS); // Integral gain
 
 int16_t error_sum = 0; // integral for the PI-controller
 volatile uint16_t targetValue = 0; // the value of RPM set by the user
-
+uint16_t refOffset = 6;
+uint16_t tempOffset =3;
 int PI_control(uint16_t setpoint, uint16_t feedback);
 
 
@@ -189,7 +190,7 @@ ISR(USART_RX_vect)
 		
 	uint16_t temp = (uint16_t) currentRPM; //temp is a dummy so that I don't have to change any value of the global variable currentRPM when sending data
 	temp >>= NUM_FRACTION_BITS; //bit shifts value back so that the decimal points go away and the value can be read in normal way
-	temp-=3;// changes the write out .change this according to motor 
+	temp-=tempOffset;// changes the write out .change this according to motor 
 	//following lines changes the value to chars
 	char char1 = (temp/100) + '0'; // +'0' casts a char to int
 	char char2 = (temp%100)/10 + '0';
@@ -213,7 +214,18 @@ ISR(USART_RX_vect)
 		stop = 0; //makes sure the PI-controller runs the correct code again
 		
 		targetValue =  (num1 - '0') * 100 + (num2 - '0') * 10 + ((num3) - '0'); // -'0' casts int to chars 
-		targetValue=targetValue-6;// change the reference for differences in motors
+		if(targetValue>=100){
+			refOffset=3;
+			tempOffset=8;
+		} else if (targetValue<100 && targetValue>30)
+		{
+			refOffset=6;
+			tempOffset=3;
+		}else {
+			refOffset=8;
+			tempOffset=1;
+		}
+		targetValue=targetValue-refOffset;// change the reference for differences in motors
 		targetValue <<= NUM_FRACTION_BITS; // bit shifts value to be in same format as other values
 	}
 	
